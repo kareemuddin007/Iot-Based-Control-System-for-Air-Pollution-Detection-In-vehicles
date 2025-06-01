@@ -1,0 +1,91 @@
+/* Comment this out to disable prints and save space */
+#define BLYNK_PRINT Serial
+
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+//#include <SimpleTimer.h>
+// You should get Auth Token in the Blynk App.
+// Go to the Project Settings (nut icon).
+
+//BlynkTimer timer;
+#define PIN_UPTIME V5
+char auth[] = "6rY3nw7kNItjl-HblUzTQTH09RNVubs8";
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "SM";
+char pass[] = "55555551";
+
+    float pollution;
+    int pollutionPin = 0; //analog pin 0
+    float sensorData;
+    int prevState = -1;
+int currState = -1;
+long lastChangeTime = 0;
+
+    BlynkTimer timer;
+
+BLYNK_READ(PIN_UPTIME)
+{
+//  // This command writes Arduino's uptime in seconds to Virtual Pin (5)
+Blynk.virtualWrite(PIN_UPTIME, millis() / 1000);
+sensorData = analogRead(A0); //reading the sensor on A0
+Serial.println(sensorData);
+//
+Blynk.virtualWrite(V5, sensorData); //sending to Blynk
+}
+
+void myTimerEvent()
+{
+  // You can send any value at any time.
+  // Please don't send more that 10 values per second.
+  Blynk.virtualWrite(V5, millis() / 1000);
+      sensorData = analogRead(0); //reading the sensor on A0
+               Serial.println(sensorData);
+  sensorData = (sensorData * 0.29765625); // costance (1/1024*100)
+
+  Blynk.virtualWrite(V5, sensorData); //sending to Blynk
+}
+void checkPin()
+{
+  // Invert state, since button is "Active LOW"
+  int state = !digitalRead(2);
+
+  //Serial.println(state);
+  // Debounce mechanism
+  long t = millis();
+  if (state != prevState) {
+    lastChangeTime = t;
+  }
+  if (t - lastChangeTime > 50) {
+    if (state != currState) {
+      currState = state;
+      
+      //Blynk.virtualWrite(V1, state);
+    }
+  }
+  prevState = state;
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(9600);
+
+  Blynk.begin(auth, ssid, pass);
+  // You can also specify server:
+  //Blynk.begin(auth, ssid, pass, "blynk-cloud.com", 8442);
+  //Blynk.begin(auth, ssid, pass, IPAddress(192,168,1,100), 8442);
+      // Setup a function to be called every second
+      //timer.setInterval(1000L, sendUptime);
+        // Make pin 2 default HIGH, and attach INT to our handler
+ // pinMode(4, INPUT_PULLUP);
+    timer.setInterval(1000L, myTimerEvent);
+}
+void loop()
+{
+  Blynk.run();
+  checkPin();   
+    timer.run(); // Initiates BlynkTimer   
+}
